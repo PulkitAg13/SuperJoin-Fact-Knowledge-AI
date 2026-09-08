@@ -184,8 +184,9 @@ class GeminiLLMProvider(LLMProvider):
         if not self.api_key:
             return None
 
-        # Standard Gemini generateContent endpoint
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+        # Clean model name if already prefixed with models/
+        model_name = self.model[7:] if self.model.startswith("models/") else self.model
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
         
         payload = {
             "contents": [
@@ -210,8 +211,27 @@ class GeminiLLMProvider(LLMProvider):
             response = requests.post(url, json=payload, timeout=45)
             if response.status_code == 200:
                 data = response.json()
-                text_content = data["candidates"][0]["content"]["parts"][0]["text"]
-                return json.loads(text_content)
+                candidates = data.get("candidates", [])
+                if not candidates:
+                    return None
+                parts = candidates[0].get("content", {}).get("parts", [])
+                text_content = ""
+                for part in parts:
+                    if "text" in part and not part.get("thought", False):
+                        text_content = part["text"]
+                if not text_content and parts and "text" in parts[-1]:
+                    text_content = parts[-1]["text"]
+
+                if text_content:
+                    cleaned = text_content.strip()
+                    if cleaned.startswith("```json"):
+                        cleaned = cleaned[7:]
+                    if cleaned.startswith("```"):
+                        cleaned = cleaned[3:]
+                    if cleaned.endswith("```"):
+                        cleaned = cleaned[:-3]
+                    return json.loads(cleaned.strip())
+                return None
             else:
                 logger.warning(f"Gemini API returned status {response.status_code}: {response.text}")
                 return None
