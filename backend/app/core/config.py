@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     # LLM Settings (Gemini)
     GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
-    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 
     # Database
     DATABASE_URL: str = os.getenv(
